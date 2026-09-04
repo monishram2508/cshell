@@ -3,6 +3,7 @@
 
 #include "builtins.h"
 #include "display.h"
+#include "history.h"
 #include "parser.h"
 #include "shell.h"
 
@@ -13,6 +14,7 @@ int main(void)
     CommandLine cl;
 
     display_init();
+    history_init();
 
     while (1) {
         print_prompt();
@@ -21,6 +23,8 @@ int main(void)
             printf("\n");
             break;
         }
+
+        history_add(line);
 
         if (parse_line(line, &cl) < 0)
             continue;

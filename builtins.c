@@ -4,6 +4,8 @@
 #include <unistd.h>
 
 #include "builtins.h"
+#include "cd.h"
+#include "history.h"
 
 static void builtin_echo(const Command *cmd)
 {
@@ -34,6 +36,16 @@ int run_builtin(const Command *cmd)
 
     if (strcmp(cmd->argv[0], "pwd") == 0) {
         builtin_pwd();
+        return 1;
+    }
+
+    if (strcmp(cmd->argv[0], "cd") == 0) {
+        builtin_cd(cmd);
+        return 1;
+    }
+
+    if (strcmp(cmd->argv[0], "history") == 0) {
+        history_print();
         return 1;
     }
 
