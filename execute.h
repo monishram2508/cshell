@@ -4,6 +4,5 @@
 #include "shell.h"
 
 void execute_command_line(const CommandLine *cl);
-void reap_background(void);
 
 #endif

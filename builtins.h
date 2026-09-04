@@ -4,5 +4,6 @@
 #include "shell.h"
 
 int run_builtin(const Command *cmd);
+int exit_requested(void);
 
 #endif

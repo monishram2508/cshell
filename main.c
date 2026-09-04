@@ -1,3 +1,4 @@
+#include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -5,6 +6,7 @@
 #include "display.h"
 #include "execute.h"
 #include "history.h"
+#include "signals.h"
 #include "parser.h"
 #include "shell.h"
 
@@ -16,12 +18,19 @@ int main(void)
 
     display_init();
     history_init();
+    signals_init();
 
     while (1) {
-        reap_background();
         print_prompt();
 
+        errno = 0;
+
         if (getline(&line, &cap, stdin) == -1) {
+            if (errno == EINTR && !feof(stdin)) {
+                clearerr(stdin);
+                continue;
+            }
+
             printf("\n");
             break;
         }
@@ -37,8 +46,12 @@ int main(void)
         const Command *first = &cl.stages[0];
 
         if (cl.n_stages == 1 && !cl.background && first->infile == NULL &&
-            first->outfile == NULL && run_builtin(first))
+            first->outfile == NULL && run_builtin(first)) {
+            if (exit_requested())
+                break;
+
             continue;
+        }
 
         execute_command_line(&cl);
     }

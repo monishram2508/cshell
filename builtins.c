@@ -15,6 +15,8 @@ static void builtin_echo(const Command *cmd)
     printf("\n");
 }
 
+static int exit_flag;
+
 static void builtin_pwd(void)
 {
     char cwd[PATH_MAX];
@@ -49,5 +51,15 @@ int run_builtin(const Command *cmd)
         return 1;
     }
 
+    if (strcmp(cmd->argv[0], "exit") == 0) {
+        exit_flag = 1;
+        return 1;
+    }
+
     return 0;
+}
+
+int exit_requested(void)
+{
+    return exit_flag;
 }

@@ -5,6 +5,7 @@
 #include "parser.h"
 
 static char tokens[MAX_TOKENS][MAX_TOKEN_LEN];
+static int token_quoted[MAX_TOKENS];
 static int n_tokens;
 
 static int is_special(char c)
@@ -12,9 +13,21 @@ static int is_special(char c)
     return c == '|' || c == '&' || c == '<' || c == '>';
 }
 
-static int is_special_token(const char *t)
+static int is_quote(char c)
 {
-    return t[1] == '\0' && is_special(t[0]);
+    return c == '"' || c == '\'';
+}
+
+static int is_operator(int index, char op)
+{
+    return !token_quoted[index] && tokens[index][0] == op &&
+           tokens[index][1] == '\0';
+}
+
+static int is_any_operator(int index)
+{
+    return !token_quoted[index] && is_special(tokens[index][0]) &&
+           tokens[index][1] == '\0';
 }
 
 static int tokenize(const char *line)
@@ -37,26 +50,50 @@ static int tokenize(const char *line)
         if (is_special(line[i])) {
             tokens[n_tokens][0] = line[i];
             tokens[n_tokens][1] = '\0';
+            token_quoted[n_tokens] = 0;
             n_tokens++;
             i++;
             continue;
         }
 
-        int start = i;
+        int len = 0;
+        int quoted = 0;
 
         while (line[i] != '\0' && !isspace((unsigned char)line[i]) &&
-               !is_special(line[i]))
-            i++;
+               !is_special(line[i])) {
+            if (is_quote(line[i])) {
+                char quote = line[i++];
 
-        int len = i - start;
+                quoted = 1;
 
-        if (len >= MAX_TOKEN_LEN) {
-            fprintf(stderr, "shell: token too long\n");
-            return -1;
+                while (line[i] != '\0' && line[i] != quote) {
+                    if (len >= MAX_TOKEN_LEN - 1) {
+                        fprintf(stderr, "shell: token too long\n");
+                        return -1;
+                    }
+
+                    tokens[n_tokens][len++] = line[i++];
+                }
+
+                if (line[i] != quote) {
+                    fprintf(stderr, "shell: unmatched %c\n", quote);
+                    return -1;
+                }
+
+                i++;
+                continue;
+            }
+
+            if (len >= MAX_TOKEN_LEN - 1) {
+                fprintf(stderr, "shell: token too long\n");
+                return -1;
+            }
+
+            tokens[n_tokens][len++] = line[i++];
         }
 
-        memcpy(tokens[n_tokens], line + start, len);
         tokens[n_tokens][len] = '\0';
+        token_quoted[n_tokens] = quoted;
         n_tokens++;
     }
 
@@ -73,13 +110,13 @@ int parse_line(const char *line, CommandLine *cl)
     if (n_tokens == 0)
         return 0;
 
-    if (strcmp(tokens[n_tokens - 1], "&") == 0) {
+    if (is_operator(n_tokens - 1, '&')) {
         cl->background = 1;
         n_tokens--;
     }
 
     for (int i = 0; i < n_tokens; i++) {
-        if (strcmp(tokens[i], "&") == 0) {
+        if (is_operator(i, '&')) {
             fprintf(stderr, "shell: syntax error near '&'\n");
             return -1;
         }
@@ -96,13 +133,12 @@ int parse_line(const char *line, CommandLine *cl)
     cl->n_stages = 1;
 
     for (int i = 0; i < n_tokens; i++) {
-        char *t = tokens[i];
-
-        if (strcmp(t, "|") == 0) {
+        if (is_operator(i, '|')) {
             if (argc == 0) {
                 fprintf(stderr, "shell: syntax error near '|'\n");
                 return -1;
             }
+
             if (cl->n_stages >= MAX_STAGES) {
                 fprintf(stderr, "shell: too many pipeline stages\n");
                 return -1;
@@ -115,15 +151,17 @@ int parse_line(const char *line, CommandLine *cl)
             continue;
         }
 
-        if (strcmp(t, "<") == 0 || strcmp(t, ">") == 0) {
-            if (i + 1 >= n_tokens || is_special_token(tokens[i + 1])) {
-                fprintf(stderr, "shell: syntax error: expected filename after '%s'\n", t);
+        if (is_operator(i, '<') || is_operator(i, '>')) {
+            char op = tokens[i][0];
+
+            if (i + 1 >= n_tokens || is_any_operator(i + 1)) {
+                fprintf(stderr, "shell: syntax error: expected filename after '%c'\n", op);
                 return -1;
             }
 
             i++;
 
-            if (t[0] == '<')
+            if (op == '<')
                 stage->infile = tokens[i];
             else
                 stage->outfile = tokens[i];
@@ -136,7 +174,7 @@ int parse_line(const char *line, CommandLine *cl)
             return -1;
         }
 
-        stage->argv[argc++] = t;
+        stage->argv[argc++] = tokens[i];
     }
 
     if (argc == 0) {

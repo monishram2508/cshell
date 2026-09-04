@@ -1,3 +1,4 @@
+#include <errno.h>
 #include <fcntl.h>
 #include <stdio.h>
 #include <sys/types.h>
@@ -6,6 +7,7 @@
 
 #include "builtins.h"
 #include "execute.h"
+#include "signals.h"
 
 static int apply_redirection(const Command *cmd)
 {
@@ -54,9 +56,13 @@ static void close_pipes(int pipes[][2], int n_pipes)
     }
 }
 
-static void run_stage(const CommandLine *cl, int index, int pipes[][2], int n_pipes)
+static void run_stage(const CommandLine *cl, int index, int pipes[][2], int n_pipes,
+                      pid_t pgid)
 {
     const Command *cmd = &cl->stages[index];
+
+    if (cl->background)
+        setpgid(0, pgid);
 
     if (index > 0 && dup2(pipes[index - 1][0], STDIN_FILENO) < 0) {
         perror("dup2");
@@ -101,6 +107,7 @@ void execute_command_line(const CommandLine *cl)
     fflush(stdout);
 
     for (int i = 0; i < cl->n_stages; i++) {
+        pid_t pgid = forked > 0 ? pids[0] : 0;
         pid_t pid = fork();
 
         if (pid < 0) {
@@ -109,7 +116,10 @@ void execute_command_line(const CommandLine *cl)
         }
 
         if (pid == 0)
-            run_stage(cl, i, pipes, n_pipes);
+            run_stage(cl, i, pipes, n_pipes, pgid);
+
+        if (cl->background)
+            setpgid(pid, pgid != 0 ? pgid : pid);
 
         pids[forked++] = pid;
     }
@@ -122,15 +132,17 @@ void execute_command_line(const CommandLine *cl)
         return;
     }
 
-    for (int i = 0; i < forked; i++)
-        if (waitpid(pids[i], NULL, 0) < 0)
-            perror("waitpid");
-}
+    signals_set_foreground(pids, forked);
 
-void reap_background(void)
-{
-    pid_t pid;
+    for (int i = 0; i < forked; i++) {
+        while (waitpid(pids[i], NULL, 0) < 0) {
+            if (errno == EINTR)
+                continue;
+            if (errno != ECHILD)
+                perror("waitpid");
+            break;
+        }
+    }
 
-    while ((pid = waitpid(-1, NULL, WNOHANG)) > 0)
-        printf("[%d] done\n", pid);
+    signals_clear_foreground();
 }

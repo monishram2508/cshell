@@ -56,3 +56,10 @@ dkms.conf
 shell
 .DS_Store
 .shell_history
+
+# not part of the submission
+SHELL_BEHAVIOR.md
+grade.py
+.claude/
+shell_reference.pdf
+OSA_Project.pdf
