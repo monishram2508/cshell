@@ -1,25 +1,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include "builtins.h"
 #include "display.h"
 #include "parser.h"
 #include "shell.h"
-
-static void dump_command_line(const CommandLine *cl)
-{
-    printf("bg=%d stages=%d\n", cl->background, cl->n_stages);
-
-    for (int i = 0; i < cl->n_stages; i++) {
-        const Command *c = &cl->stages[i];
-
-        printf("  [%d] argv=[", i);
-        for (int j = 0; j < c->argc; j++)
-            printf("%s%s", c->argv[j], j + 1 < c->argc ? ", " : "");
-        printf("] in=%s out=%s\n",
-               c->infile != NULL ? c->infile : "(null)",
-               c->outfile != NULL ? c->outfile : "(null)");
-    }
-}
 
 int main(void)
 {
@@ -43,7 +28,10 @@ int main(void)
         if (cl.n_stages == 0)
             continue;
 
-        dump_command_line(&cl);
+        if (cl.n_stages == 1 && run_builtin(&cl.stages[0]))
+            continue;
+
+        printf("external: %s\n", cl.stages[0].argv[0]);
     }
 
     free(line);

@@ -1,7 +1,7 @@
 CC = gcc
 CFLAGS = -Wall -Wextra -g
 
-SRCS = main.c parser.c display.c
+SRCS = main.c parser.c display.c builtins.c
 OBJS = $(SRCS:.c=.o)
 TARGET = shell
 
