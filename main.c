@@ -34,7 +34,10 @@ int main(void)
         if (cl.n_stages == 0)
             continue;
 
-        if (cl.n_stages == 1 && run_builtin(&cl.stages[0]))
+        const Command *first = &cl.stages[0];
+
+        if (cl.n_stages == 1 && !cl.background && first->infile == NULL &&
+            first->outfile == NULL && run_builtin(first))
             continue;
 
         execute_command_line(&cl);
