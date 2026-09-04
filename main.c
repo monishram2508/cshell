@@ -3,6 +3,7 @@
 
 #include "builtins.h"
 #include "display.h"
+#include "execute.h"
 #include "history.h"
 #include "parser.h"
 #include "shell.h"
@@ -17,6 +18,7 @@ int main(void)
     history_init();
 
     while (1) {
+        reap_background();
         print_prompt();
 
         if (getline(&line, &cap, stdin) == -1) {
@@ -35,7 +37,7 @@ int main(void)
         if (cl.n_stages == 1 && run_builtin(&cl.stages[0]))
             continue;
 
-        printf("external: %s\n", cl.stages[0].argv[0]);
+        execute_command_line(&cl);
     }
 
     free(line);
