@@ -30,23 +30,45 @@ static char *trimmed_copy(const char *line)
 {
     size_t end = strlen(line);
     size_t start = 0;
+    size_t last = 0;
 
-    while (end > 0 && isspace((unsigned char)line[end - 1]))
+    if (end > 0 && line[end - 1] == '\n')
         end--;
 
     while (start < end && isspace((unsigned char)line[start]))
         start++;
 
+    for (size_t i = start; i < end; i++)
+        if (!isspace((unsigned char)line[i]))
+            last = i;
+
     if (start == end)
         return NULL;
 
-    size_t len = end - start;
-    char *copy = malloc(len + 1);
+    char *copy = malloc(end - start + 1);
+    size_t len = 0;
 
     if (copy == NULL)
         return NULL;
 
-    memcpy(copy, line + start, len);
+    for (size_t i = start; i < end; i++) {
+        if (i > last) {
+            copy[len++] = line[i];
+            continue;
+        }
+
+        if (isspace((unsigned char)line[i])) {
+            copy[len++] = ' ';
+
+            while (i + 1 < end && isspace((unsigned char)line[i + 1]))
+                i++;
+
+            continue;
+        }
+
+        copy[len++] = line[i];
+    }
+
     copy[len] = '\0';
 
     return copy;
