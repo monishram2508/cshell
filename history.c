@@ -6,6 +6,7 @@
 
 #include "display.h"
 #include "history.h"
+#include "shell.h"
 
 #define HIST_MAX 20
 #define HIST_SHOW 10

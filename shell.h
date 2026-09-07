@@ -3,6 +3,10 @@
 
 #include <limits.h>
 
+#ifndef PATH_MAX
+#define PATH_MAX 4096
+#endif
+
 #define MAX_ARGS 64
 #define MAX_STAGES 16
 #define MAX_TOKENS 128

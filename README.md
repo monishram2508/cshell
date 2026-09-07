@@ -4,17 +4,6 @@ An interactive Unix-like shell written in C, built directly on POSIX system call
 (`fork`, `execvp`, `waitpid`, `pipe`, `dup2`, `open`, `sigaction`). No third-party
 libraries are used.
 
-## Build and Run
-
-```
-make        # builds the executable ./shell
-./shell     # start the shell
-make clean  # remove the executable and object files
-```
-
-The directory the shell is launched from becomes the shell's home directory for that
-session. Exit with `exit` or Ctrl+D on an empty line.
-
 ## Features
 
 **Prompt** — `<username@hostname:cwd>`, with the home directory shown as `~` and
@@ -124,3 +113,51 @@ System call failures are reported with `perror`, prefixed by the relevant name: 
 command for a failed `exec`, the filename for a failed redirection, and `cd` for a
 failed directory change. Parse errors are prefixed with `shell:`. All errors are
 written to standard error, and no error path terminates the shell.
+
+## Compilation and Execution
+
+Compile from the project directory:
+
+```
+make
+```
+
+This compiles each source file with `gcc -Wall -Wextra -g` and links them into an
+executable named `shell`. The build produces no warnings.
+
+Run the shell:
+
+```
+./shell
+```
+
+The directory the shell is started from becomes its home directory for that session
+and is displayed as `~` in the prompt. Commands are typed at the prompt in the usual
+way, for example:
+
+```
+<user@host:~> ls -l | grep txt > out.txt
+<user@host:~> sleep 5 &
+<user@host:~> cd ..
+```
+
+Exit with the `exit` built-in, or by pressing Ctrl+D on an empty line. Ctrl+C
+interrupts the running foreground command without terminating the shell.
+
+Remove the executable and the object files:
+
+```
+make clean
+```
+
+### Environment
+
+The shell uses only C standard library and POSIX functions, so it builds on Linux and
+macOS without modification. It was developed and tested on macOS, where `gcc` invokes
+Apple Clang, and it compiles cleanly with the same sources under `gcc` on Linux; no
+platform-specific code or conditional compilation is used.
+
+Two portability details are worth noting. `PATH_MAX` is taken from `<limits.h>` with a
+4096-byte fallback defined in `shell.h`, since the constant is optional in POSIX.
+`HOST_NAME_MAX` is not used at all, as it is unavailable on macOS; a fixed 256-byte
+buffer is used for the hostname instead.

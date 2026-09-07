@@ -7,6 +7,7 @@
 #include <unistd.h>
 
 #include "display.h"
+#include "shell.h"
 
 #define HOST_LEN 256
 

@@ -63,3 +63,4 @@ grade.py
 .claude/
 shell_reference.pdf
 OSA_Project.pdf
+*.tar.gz
