@@ -27,33 +27,40 @@ static void push(char *entry)
     entries[count++] = entry;
 }
 
-static char *trimmed_copy(const char *line)
+static char *line_copy(const char *line)
 {
     size_t end = strlen(line);
-    size_t start = 0;
+    size_t first = 0;
     size_t last = 0;
+    size_t len = 0;
+    int found = 0;
+    char *copy;
 
     if (end > 0 && line[end - 1] == '\n')
         end--;
 
-    while (start < end && isspace((unsigned char)line[start]))
-        start++;
+    for (size_t i = 0; i < end; i++) {
+        if (isspace((unsigned char)line[i]))
+            continue;
 
-    for (size_t i = start; i < end; i++)
-        if (!isspace((unsigned char)line[i]))
-            last = i;
+        if (!found) {
+            first = i;
+            found = 1;
+        }
 
-    if (start == end)
+        last = i;
+    }
+
+    if (!found)
         return NULL;
 
-    char *copy = malloc(end - start + 1);
-    size_t len = 0;
+    copy = malloc(end + 1);
 
     if (copy == NULL)
         return NULL;
 
-    for (size_t i = start; i < end; i++) {
-        if (i > last) {
+    for (size_t i = 0; i < end; i++) {
+        if (i < first || i > last) {
             copy[len++] = line[i];
             continue;
         }
@@ -61,7 +68,7 @@ static char *trimmed_copy(const char *line)
         if (isspace((unsigned char)line[i])) {
             copy[len++] = ' ';
 
-            while (i + 1 < end && isspace((unsigned char)line[i + 1]))
+            while (i + 1 <= last && isspace((unsigned char)line[i + 1]))
                 i++;
 
             continue;
@@ -103,7 +110,7 @@ void history_init(void)
     size_t cap = 0;
 
     while (getline(&line, &cap, fp) != -1) {
-        char *entry = trimmed_copy(line);
+        char *entry = line_copy(line);
 
         if (entry != NULL)
             push(entry);
@@ -115,7 +122,7 @@ void history_init(void)
 
 void history_add(const char *line)
 {
-    char *entry = trimmed_copy(line);
+    char *entry = line_copy(line);
 
     if (entry == NULL)
         return;
